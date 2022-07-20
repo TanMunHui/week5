@@ -1,1 +1,122 @@
+import sys
+# Python 3.7 is required
+assert sys.version_info >= (3,7)
 
+import cv2 as cv
+import numpy as np
+
+# Make sure that optimization is enabled
+if not cv.useOptimized():
+    cv.setUseOptimized(True)
+
+cv.useOptimized()
+
+if not cv.useOptimized():
+    cv.setUseOptimized(true)
+
+cv.useOptimized()
+
+#Q1
+img = cv.imread('dog.jfif')
+img_copy = img.copy()
+
+def crop_grid(img, num_horizontal_grid, num_vertical_grid, line_color):
+    height, width = img.shape[:2]
+    
+    line_color# M and N are basically number of pixels per patch
+    M, N = int(height/num_horizontal_grid), int(width/num_vertical_grid)
+
+    x1, y1 = 0, 0
+
+    for y in range(0, height, M):
+        for x in range(0, width, N):
+    #         if (height - y) < M or (width - x) < N:
+    #             break
+
+            y1 = y + M    # lower right coordinate that will be used to construct rectangle
+            x1 = x + N
+
+            # Check whether patch lower right coordinate exceeds image height and width
+            if x1 >= width and y1 >= height:
+                x1 = width - 1
+                y1 = height - 1
+                cv.rectangle(img_copy, (x, y), (x1, y1), line_color, 1)
+                
+            # When patch lower right y-coordinate exceeds patch height
+            elif y1 >= height:
+                y1 = height - 1
+                cv.rectangle(img_copy, (x, y), (x1, y1), line_color, 1)
+
+            # When patch lower right x-coordinate exceeds patch width
+            elif x1 >= width:
+                x1 = width - 1
+                cv.rectangle(img_copy, (x, y), (x1, y1), line_color, 1)
+
+            else:
+                cv.rectangle(img_copy, (x, y), (x1, y1), line_color, 1)
+    return img
+    
+func_img = crop_grid(img_copy, 4, 3, (220,255,0))
+cv.imshow('patched image', func_img)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+#Q2
+img = cv.imread('lena.jfif')
+rows, cols = img.shape[:2]
+M = cv.getRotationMatrix2D(((cols-1)/2.0, (rows-1)/2.0), 45, 1)
+dst = cv.warpAffine(img, M, (cols, rows))
+
+cv.imshow('rotated_image', dst)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+#Q3
+def greater_rot(rotate_img, angle):
+    Height, Width = rotate_img.shape[:2]
+    center = Height//2, Width//2
+    rotationMatrix = cv.getRotationMatrix2D(center, angle, 1)
+    
+    cosofRotationMatrix = np.abs(rotationMatrix[0][0])
+    sinofRotationMatrix = np.abs(rotationMatrix[0][1])
+    
+    newimgHeight = int((Height * sinofRotationMatrix) +(Width * cosofRotationMatrix))
+    newimgWidth = int((Height * cosofRotationMatrix) +(Width * sinofRotationMatrix))
+    
+    rotationMatrix[0][2] += (newimgWidth/2) - center[0]
+    rotationMatrix[1][2] += (newimgHeight/2) - center[1]
+    
+    rotated_img = cv.warpAffine(rotate_img, rotationMatrix, (newimgWidth, newimgHeight))
+    return rotated_img
+
+img = cv.imread("lena.jfif")
+betterVerRotate = greater_rot(img, 45)
+cv.imshow("rotate", betterVerRotate)
+cv.waitKey(0)
+cv.destroyAllWindows()
+
+#Q4
+# Load two images
+img1 = cv.imread('native-bee.png')
+img2 = cv.imread('flower.jfif')
+
+# I want to put logo on top-left corner, So I create a ROI
+rows,cols,channels = img2.shape
+roi = img1[0:rows, 0:cols]
+
+# Now create a mask of logo and create its inverse mask also
+img2gray = cv.cvtColor(img2,cv.COLOR_BGR2GRAY)
+ret, mask = cv.threshold(img2gray, 70, 255, cv.THRESH_BINARY)
+mask_inv = cv.bitwise_not(mask)
+# cv.imshow('img',mask)
+# Now black-out the area of logo in ROI
+img1_bg = cv.bitwise_and(roi,roi,mask = mask_inv)
+# Take only region of logo from logo image.
+img2_fg = cv.bitwise_and(img2,img2,mask = mask)
+
+# Put logo in ROI and modify the main image
+dst = cv.add(img1_bg,img2_fg)
+img1[0:rows, 0:cols ] = dst
+cv.imshow('flower_bee',img1)
+cv.waitKey(0)
+cv.destroyAllWindows()
